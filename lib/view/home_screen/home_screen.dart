@@ -1,118 +1,230 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_quiz_app/dummydb.dart';
+import 'package:flutter_application_quiz_app/utlis/color_constants.dart';
+import 'package:flutter_application_quiz_app/view/home_screen/widget/options_card.dart';
+import 'package:flutter_application_quiz_app/view/result_screen/result_screen.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:lottie/lottie.dart';
 
 
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key, required this.questionList});
 
-void main() {
-  runApp(const Homescreen());
-}
-
-class Homescreen extends StatefulWidget {
-  const Homescreen({super.key});
+  final List questionList;
 
   @override
-  State<Homescreen> createState() => _HomescreenState();
+  State<HomeScreen> createState() => _QuizScreenState();
 }
 
-class _HomescreenState extends State<Homescreen> {
-  int questionsIndex = 0;
+class _QuizScreenState extends State<HomeScreen> {
+  int? selectedAnswerIndex;
+  int questionIndex = 0;
+  int rightAnswerCount = 0;
+  int wrongAnswerCount = 0;
+  double value = 0;
+
+  @override
+  void initState() {
+    widget.questionList.shuffle();
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        backgroundColor: Colors.black,
-        appBar: AppBar(backgroundColor: Colors.black, actions: [
-          Text(
-            "5/10",
-            style: TextStyle(color: Colors.red),
-          ),
-        ]),
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
-            child: Column(
-              children: [
-                Expanded(
-                  child: Container(
-                    alignment: Alignment.center,
-                    padding: EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                        color: Colors.grey.shade700,
-                        borderRadius: BorderRadius.circular(10)),
-                    child: Text(
-                      
-                    
-                      textAlign: TextAlign.justify,
-                      DummyDb.question[questionsIndex]["question"],
-                     
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w500,
-                          fontSize: 20),
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  height: 20,
-                ),
-                Column(
-                    children: List.generate(
-                  4,
-                  (index) => Container(
-                    margin: EdgeInsets.only(bottom: 15),
-                    padding: EdgeInsets.symmetric(vertical: 20, horizontal: 10),
-                    decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.grey.shade800)),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          "volleyball",
-                          style: TextStyle(
-                              color: Colors.white, fontWeight: FontWeight.w500),
-                        ),
-                        CircleAvatar(
-                          radius: 10,
-                          backgroundColor: Colors.white,
-                          child: CircleAvatar(
-                            backgroundColor: Colors.black,
-                            radius: 8,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ))
-              ],
+    return Scaffold(
+      backgroundColor: ColorConstants.mainBlack,
+      appBar: _buildAppBarSection(),
+      body: Padding(
+        padding: const EdgeInsets.all(18.0),
+        child: Column(
+          children: <Widget>[
+            _buildQuestionSection(),
+            SizedBox(height: 10),
+            _buildOptionSelectionSection(),
+          ],
+        ),
+      ),
+      bottomNavigationBar: _buildNextButtonSection(context),
+    );
+  }
+
+  AppBar _buildAppBarSection() {
+    return AppBar(
+      backgroundColor: ColorConstants.mainBlack,
+      surfaceTintColor: ColorConstants.mainBlack,
+      leadingWidth: 60,
+      toolbarHeight: 80,
+      titleSpacing: 10,
+      leading: IconButton(
+        onPressed: () {
+          Navigator.pop(context);
+        },
+        icon: Icon(
+          Icons.close,
+          color: ColorConstants.fontWhite,
+        ),
+      ),
+      centerTitle: true,
+      title: Row(
+        children: <Widget>[
+          SizedBox(
+            width: 270,
+            child: LinearProgressIndicator(
+              minHeight: 15,
+              backgroundColor: ColorConstants.containerGrey,
+              value: (questionIndex + 1) / widget.questionList.length,
+              color: ColorConstants.blue,
+              borderRadius: BorderRadius.circular(13),
             ),
+          ),
+        ],
+      ),
+      actions: <Widget>[
+        Text(
+          "${questionIndex + 1}/${widget.questionList.length}",
+          style: TextStyle(
+            color: ColorConstants.blue,
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
           ),
         ),
-        bottomNavigationBar: InkWell(
-          onTap: () {
-            setState(() {
-              questionsIndex++;
-            });
+        SizedBox(width: 15),
+      ],
+    );
+  }
+
+  Widget _buildOptionSelectionSection() {
+    return Column(
+      children: List.generate(
+        4,
+        (index) => OptionsCard(
+          borderColor: _getColor(index),
+          option: widget.questionList[questionIndex]["options"][index],
+          selectedIcon: _getOptionIcon(index),
+          onOptionTap: () {
+            if (selectedAnswerIndex == null) {
+              setState(() {
+                selectedAnswerIndex = index;
+                if (selectedAnswerIndex ==
+                    widget.questionList[questionIndex]["answer"]) {
+                  rightAnswerCount++;
+                } else {
+                  wrongAnswerCount++;
+                }
+              });
+            }
           },
-          child: Container(
-            alignment: Alignment.center,
-            margin: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-            height: 60,
-            decoration: BoxDecoration(
-              color: Colors.blue,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              "Next",
-              style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 25),
-            ),
-          ),
         ),
       ),
     );
+  }
+
+  Widget? _buildNextButtonSection(BuildContext context) {
+    return selectedAnswerIndex == null
+        ? null
+        : Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(13),
+              onTap: () {
+                setState(() {
+                  selectedAnswerIndex = null;
+                  if (questionIndex < widget.questionList.length - 1) {
+                    questionIndex++;
+                  } else {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ResultScreen(
+                          rightAnsCount: rightAnswerCount,
+                          wrongAnsCount: wrongAnswerCount,
+                          questions: widget.questionList,
+                        ),
+                      ),
+                    );
+                  }
+                });
+              },
+              child: Container(
+                height: 50,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: ColorConstants.blue,
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: Text(
+                  "Next",
+                  style: TextStyle(
+                    color: ColorConstants.fontWhite,
+                    fontSize: 25,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: -1,
+                  ),
+                ),
+              ),
+            ),
+          );
+  }
+
+  Widget _buildQuestionSection() {
+    return Stack(
+      children: <Widget>[
+        Container(
+          height: 300,
+          alignment: Alignment.centerLeft,
+          padding: EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: ColorConstants.containerGrey,
+            borderRadius: BorderRadius.circular(15),
+          ),
+          child: Text(
+            widget.questionList[questionIndex]["question"],
+            textAlign: TextAlign.justify,
+            style: TextStyle(
+              color: ColorConstants.fontWhite,
+              fontSize: 20,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+        ),
+        selectedAnswerIndex == widget.questionList[questionIndex]["answer"]
+            ? LottieBuilder.asset("assets/animations/popper.json",
+                width: double.infinity, height: 300)
+            : SizedBox(),
+      ],
+    );
+  }
+
+  IconData _getOptionIcon(int index) {
+    if (selectedAnswerIndex != null) {
+      if (selectedAnswerIndex == index) {
+        if (selectedAnswerIndex ==
+            widget.questionList[questionIndex]["answer"]) {
+          return FontAwesomeIcons.circleCheck;
+        } else {
+          return FontAwesomeIcons.circleXmark;
+        }
+      }
+      if (index == widget.questionList[questionIndex]["answer"]) {
+        return FontAwesomeIcons.circleCheck;
+      }
+    }
+    return FontAwesomeIcons.circle;
+  }
+
+  Color _getColor(int index) {
+    if (selectedAnswerIndex != null) {
+      if (selectedAnswerIndex == index) {
+        if (selectedAnswerIndex ==
+            widget.questionList[questionIndex]["answer"]) {
+          return Colors.green;
+        } else {
+          return Colors.red;
+        }
+      }
+      if (index == widget.questionList[questionIndex]["answer"]) {
+        return Colors.green;
+      }
+    }
+    return Colors.grey.shade600;
   }
 }
